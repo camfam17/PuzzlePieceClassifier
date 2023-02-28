@@ -3,17 +3,24 @@ import numpy as np
 import random
 from tkinter import filedialog
 
+# normalising
+# thresholding
+# masking
+# connectedComponents
+# countour analysis
+
+
 class Classifier():
     
 	def __init__(self, images):
 		
 		for i in range(len(images)):
 			
-			self.img = images[i]
+			self.original = images[i]
 			
-			self.img = cv.resize(self.img, self.smart_dimensions(self.img.shape, 800, 800))
+			self.original = cv.resize(self.original, self.smart_dimensions(self.original.shape, 800, 800))
 			
-			self.process(self.img)
+			self.process(self.original)
 			
 			
 			cv.waitKey(0)
@@ -30,18 +37,78 @@ class Classifier():
 		# cv.imshow('fgmask', fgMask)
 		
 		bnw = cv.cvtColor(src=img, code=cv.COLOR_BGR2GRAY)
+		# bnw = cv.blur(bnw, (3, 3))
 		cv.imshow('bnw', bnw)
 		
-		bg_colour = self.detect_background_colour(img)
+		# bg_colour = self.detect_background_colour(img)
 		
 		hst = cv.normalize(bnw, None, 0, 300, cv.NORM_MINMAX)
-		cv.imshow('normal', hst)
+		cv.imshow('normalized', hst)
 		
-		ret, img = cv.threshold(bnw, 125, 255, cv.THRESH_BINARY)
-		cv.imshow('thesh', img)
+		ret, thresh = cv.threshold(bnw, 125, 255, cv.THRESH_BINARY)
+		cv.imshow('thresh', thresh)
+		
+		self.component_analysis(thresh)
 		
 		# self.create_mask(img, bg_colour)
 	
+	
+	def component_analysis(self, thresholded_image):
+		
+		img = thresholded_image.copy()
+		
+		num_labels, labels, stats, centroids = cv.connectedComponentsWithStats(img, connectivity=4)
+		
+		print('num_labels', num_labels)
+		print('output', labels)
+		
+		sizes = stats[:, -1]
+		
+		max_label = 1
+		max_size = sizes[1]
+		for i in range(2, num_labels):
+			if sizes[i] > max_size:
+				max_label = i
+				max_size = sizes[i]
+		
+		#create black image for the largest component
+		component_image = np.zeros(labels.shape)
+		component_image= (labels == max_label).astype("uint8")*255
+		
+		cv.imshow('component', component_image)
+		
+		
+		for i in range(num_labels):
+			
+			if i == 0:
+				text = 'examining component {}/{} (background)'.format(i + 1, num_labels)
+			else:
+				text = 'examining component {}/{}'.format(i + 1, num_labels)
+			
+			
+			
+			x = stats[i, cv.CC_STAT_LEFT]
+			y = stats[i, cv.CC_STAT_TOP]
+			w = stats[i, cv.CC_STAT_WIDTH]
+			h = stats[i, cv.CC_STAT_HEIGHT]
+			area = stats[i, cv.CC_STAT_AREA]
+			cX, cY = centroids[i]
+			
+			if area < 10: continue
+			
+			print('[INFO] {}'.format(text) + ', area=', area)
+			
+			
+			output = self.original.copy()
+			cv.rectangle(output, (x, y), (x+w, y+h), (0, 255, 0), 3)
+			cv.circle(output, (int(cX), int(cY)), 4, (0, 0, 255), -1)
+			
+			component_mask = (labels == i).astype('uint8')*255
+			
+			cv.imshow('output', output)
+			cv.imshow('component' + str(i), component_mask)
+			cv.waitKey(0)
+		
 	
 	def create_mask(self, image, bg_colour):
 		
@@ -126,7 +193,7 @@ if __name__ == '__main__':
 	
 	images = []
 	# images.append(cv.imread('images/img7.jpg'))
-	# images.append(cv.imread('images/img2.jpg'))
+	# # images.append(cv.imread('images/img2.jpg'))
 	
 	files = filedialog.askopenfilenames()
 	for file in files:
