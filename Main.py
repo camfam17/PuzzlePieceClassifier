@@ -1,7 +1,7 @@
 import cv2 as cv
 import numpy as np
 import random
-from collections import Counter
+from tkinter import filedialog
 
 class Classifier():
     
@@ -34,9 +34,13 @@ class Classifier():
 		
 		bg_colour = self.detect_background_colour(img)
 		
-		# img = cv.threshold(src=img, )
+		hst = cv.normalize(bnw, None, 0, 300, cv.NORM_MINMAX)
+		cv.imshow('normal', hst)
 		
-		self.create_mask(img, bg_colour)
+		ret, img = cv.threshold(bnw, 125, 255, cv.THRESH_BINARY)
+		cv.imshow('thesh', img)
+		
+		# self.create_mask(img, bg_colour)
 	
 	
 	def create_mask(self, image, bg_colour):
@@ -92,17 +96,10 @@ class Classifier():
 		counts = {} # key:value --> colour:tally --> [b, g, r]:tally
 		for i in range(100):
 			
-			# colours.append(img[random.randrange(0, hBorder), random.randrange(0, width)]) 				# TOP border
-			# colours.append(img[random.randrange(height-hBorder, height), random.randrange(0, width)])	# BOTTOM border
-			# colours.append(img[random.randrange(0, height), random.randrange(0, wBorder)])				# LEFT border
-			# colours.append(img[random.randrange(0, height), random.randrange(width-wBorder, width)])	# RIGHT border
-			
-			increment_in_dict(counts, tuple(img[random.randrange(0, hBorder), random.randrange(0, width)]))
-			increment_in_dict(counts, tuple(img[random.randrange(height-hBorder, height), random.randrange(0, width)]))
-			increment_in_dict(counts, tuple(img[random.randrange(0, height), random.randrange(0, wBorder)]))
-			increment_in_dict(counts, tuple(img[random.randrange(0, height), random.randrange(width-wBorder, width)]))
-		
-		print(counts)
+			increment_in_dict(counts, tuple(img[random.randrange(0, hBorder), random.randrange(0, width)])) 				# TOP border
+			increment_in_dict(counts, tuple(img[random.randrange(height-hBorder, height), random.randrange(0, width)]))		# BOTTOM border
+			increment_in_dict(counts, tuple(img[random.randrange(0, height), random.randrange(0, wBorder)]))				# LEFT border
+			increment_in_dict(counts, tuple(img[random.randrange(0, height), random.randrange(width-wBorder, width)]))		# RIGHT border
 		
 		mode_colour = max(counts, key=counts.get)
 		print(mode_colour)
@@ -128,9 +125,12 @@ class Classifier():
 if __name__ == '__main__':
 	
 	images = []
-	images.append(cv.imread('images/img7.jpg'))
+	# images.append(cv.imread('images/img7.jpg'))
 	# images.append(cv.imread('images/img2.jpg'))
 	
+	files = filedialog.askopenfilenames()
+	for file in files:
+		images.append(cv.imread(file))
 	
 	c = Classifier(images)
 	
