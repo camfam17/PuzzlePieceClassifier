@@ -27,8 +27,28 @@ class Classifier():
 			cv.destroyAllWindows()
 	
 	
+	def crop(self, image, crop_percent=0.05):
+		
+		img = image.copy()
+		
+		print('1st shape=', img.shape)
+		
+		height, width, _ = img.shape
+		
+		crop_width = int(crop_percent * width)
+		crop_height = int(crop_percent * height)
+		
+		img = img[ crop_height:height-crop_height , crop_width:width-crop_width, :]
+		
+		print('2nd shape=', img.shape)
+		
+		return img
+	
+	
 	def process(self, img: cv.Mat):
 		
+		
+		img = self.crop(img)
 		
 		cv.imshow('original', img)
 		
