@@ -8,6 +8,7 @@ from tkinter import filedialog
 # masking
 # connectedComponents
 # countour analysis
+# edge detection (canny?)
 
 
 class Classifier():
@@ -24,25 +25,7 @@ class Classifier():
 			
 			
 			cv.waitKey(0)
-			cv.destroyAllWindows()
-	
-	
-	def crop(self, image, crop_percent=0.05):
-		
-		img = image.copy()
-		
-		print('1st shape=', img.shape)
-		
-		height, width, _ = img.shape
-		
-		crop_width = int(crop_percent * width)
-		crop_height = int(crop_percent * height)
-		
-		img = img[ crop_height:height-crop_height , crop_width:width-crop_width, :]
-		
-		print('2nd shape=', img.shape)
-		
-		return img
+			cv.destroyAllWindows()	
 	
 	
 	def process(self, img: cv.Mat):
@@ -57,13 +40,16 @@ class Classifier():
 		# cv.imshow('fgmask', fgMask)
 		
 		bnw = cv.cvtColor(src=img, code=cv.COLOR_BGR2GRAY)
-		# bnw = cv.blur(bnw, (3, 3))
+		bnw = cv.blur(bnw, (3, 3))
 		cv.imshow('bnw', bnw)
+		
+		# self.canny_edge(norm)
+		self.sobel_edge(bnw)
 		
 		# bg_colour = self.detect_background_colour(img)
 		
-		hst = cv.normalize(bnw, None, 0, 300, cv.NORM_MINMAX)
-		cv.imshow('normalized', hst)
+		norm = cv.normalize(bnw, None, 0, 300, cv.NORM_MINMAX)
+		cv.imshow('normalized', norm)
 		
 		ret, thresh = cv.threshold(bnw, 125, 255, cv.THRESH_BINARY)
 		cv.imshow('thresh', thresh)
@@ -71,6 +57,31 @@ class Classifier():
 		self.component_analysis(thresh)
 		
 		# self.create_mask(img, bg_colour)
+	
+	
+	def sobel_edge(self, image):
+		
+		img = image.copy()
+		
+		sx = cv.Sobel(src=img, ddepth=cv.CV_64F, dx=1, dy=0, ksize=5)
+		sy = cv.Sobel(src=img, ddepth=cv.CV_64F, dx=0, dy=1, ksize=5)
+		sxy = cv.Sobel(src=img, ddepth=cv.CV_64F, dx=1, dy=1, ksize=5)
+
+		cv.imshow('sobelx', sx)
+		cv.imshow('sobely', sy)
+		cv.imshow('sobelxy', sxy)
+		
+		return sxy
+	
+	
+	def canny_edge(self, image):
+		
+		img = image.copy()
+		
+		can = cv.Canny(img, 100, 1000)
+		
+		cv.imshow('canny', can)
+		
 	
 	
 	def component_analysis(self, thresholded_image):
@@ -114,7 +125,7 @@ class Classifier():
 			area = stats[i, cv.CC_STAT_AREA]
 			cX, cY = centroids[i]
 			
-			if area < 10: continue
+			if area < int(0.05 * img.shape[0] * img.shape[1]) : continue
 			
 			print('[INFO] {}'.format(text) + ', area=', area)
 			
@@ -150,6 +161,25 @@ class Classifier():
 		
 		cv.imshow('mask', mask)
 		cv.imshow('result', result)
+	
+	
+	def crop(self, image, crop_percent=0.05):
+		
+		img = image.copy()
+		crop_percent /= 2
+		
+		print('1st shape=', img.shape)
+		
+		height, width, _ = img.shape
+		
+		crop_width = int(crop_percent * width)
+		crop_height = int(crop_percent * height)
+		
+		img = img[ crop_height:height-crop_height , crop_width:width-crop_width, :]
+		
+		print('2nd shape=', img.shape)
+		
+		return img
 	
 	
 	# this functions attempts to detect the background colour by randomly sampling points around the images border (5% inward from the edges), 
